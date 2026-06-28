@@ -21,6 +21,8 @@ function TypeBadge({ type }) {
   return <span className="badge badge-type">{label}</span>;
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
 export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQuote, onUpdateQuote, mode = 'quotes' }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -39,7 +41,7 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
 
   const handleQuickStatus = async (q, newStatus) => {
     try {
-      const res = await fetch(`/api/quotes/${q.id}`, {
+      const res = await fetch(`${API_BASE}/api/quotes/${q.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

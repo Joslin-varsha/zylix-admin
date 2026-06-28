@@ -23,14 +23,17 @@ const iconMap = {
 
 const DEFAULT_MATERIALS = ['PLA', 'PETG', 'ABS', 'Resin', 'Wood', 'PP', 'PET'];
 
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
 const resolveImageUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  // If it starts with /uploads, it's a backend file path (port 5000)
+  const host = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+  // If it starts with /uploads, it's a backend file path
   if (url.startsWith('/uploads')) {
-    return `http://localhost:5000${url}`;
+    return `${host}${url}`;
   }
   // Otherwise, it's a storefront asset, so load from storefront (port 5173)
   return `http://localhost:5173${url.startsWith('/') ? '' : '/'}${url}`;
@@ -94,7 +97,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/categories');
+      const res = await fetch(`${API_BASE}/api/categories`);
       if (!res.ok) throw new Error(`Server returned error: ${res.status}`);
       const data = await res.json();
       if (data && data.length > 0) {
@@ -114,7 +117,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch(`${API_BASE}/api/products`);
       if (!res.ok) throw new Error(`Server returned error: ${res.status}`);
       const data = await res.json();
       setProducts(data);
@@ -173,7 +176,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       formData.append('icon', newCatIcon);
       formData.append('image', catImageFile);
 
-      const res = await fetch('/api/categories', {
+      const res = await fetch(`${API_BASE}/api/categories`, {
         method: 'POST',
         body: formData
       });
@@ -214,7 +217,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setError('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/categories/${catId}`, {
+      const res = await fetch(`${API_BASE}/api/categories/${catId}`, {
         method: 'DELETE'
       });
 
@@ -377,7 +380,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
         formData.append('image', imageFile);
       }
 
-      const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
+      const url = editingProduct ? `${API_BASE}/api/products/${editingProduct.id}` : `${API_BASE}/api/products`;
       const method = editingProduct ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -423,7 +426,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setError('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/products/${productId}`, {
+      const res = await fetch(`${API_BASE}/api/products/${productId}`, {
         method: 'DELETE'
       });
 

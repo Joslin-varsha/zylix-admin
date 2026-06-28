@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = '/api'; // proxied to http://localhost:5000 via vite config
+const API_BASE = import.meta.env.VITE_API_BASE ? `${import.meta.env.VITE_API_BASE}/api` : '/api';
 
 export function useQuotes() {
   const [quotes, setQuotes] = useState([]);

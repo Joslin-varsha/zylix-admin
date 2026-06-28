@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Phone, Download, CheckCircle, XCircle } from 'lucide-react';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_BASE ? `${import.meta.env.VITE_API_BASE}/api` : '/api';
 
 export default function QuoteDrawer({ quote, onClose, onUpdated }) {
   const [editPrice, setEditPrice] = useState(quote.price_estimate?.toString() || '');
