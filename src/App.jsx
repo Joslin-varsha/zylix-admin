@@ -3,7 +3,7 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 
 // Simple hardcoded admin credentials (for local/private use)
-const ADMIN_EMAIL = 'joslinvarsha55@gmail.com';
+const ADMIN_EMAIL = 'ajin758085@gmail.com';
 const ADMIN_PASSWORD = 'zylix@admin2024';
 const SESSION_KEY = 'zylix_admin_session';
 
