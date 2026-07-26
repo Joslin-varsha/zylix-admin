@@ -15,7 +15,9 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   const handleLogin = (email, password) => {
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanAdminEmail = ADMIN_EMAIL.trim().toLowerCase();
+    if (cleanEmail === cleanAdminEmail && password === ADMIN_PASSWORD) {
       localStorage.setItem(SESSION_KEY, 'authenticated');
       setIsLoggedIn(true);
       setLoginError('');
