@@ -84,6 +84,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     { key: 'Size', value: '' }
   ]);
   const [inStock, setInStock] = useState(true);
+  const [allowCustomize, setAllowCustomize] = useState(false);
+  const [labPreset, setLabPreset] = useState('other');
   const didFetch = React.useRef(false);
 
   useEffect(() => {
@@ -299,6 +301,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     }
     setSpecs(specsArray);
     setInStock(prod.inStock !== false);
+    setAllowCustomize(prod.allow_customize === true);
+    setLabPreset(prod.lab_preset || 'other');
     setShowAddForm(true);
   };
 
@@ -321,6 +325,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       { key: 'Size', value: '' }
     ]);
     setInStock(true);
+    setAllowCustomize(false);
+    setLabPreset('other');
   };
 
   const handleSubmit = async (e) => {
@@ -365,6 +371,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       formData.append('badge', badge.trim());
       formData.append('description', description.trim());
       formData.append('inStock', String(inStock));
+      formData.append('allow_customize', String(allowCustomize));
+      formData.append('lab_preset', allowCustomize ? labPreset : '');
       formData.append('materials', JSON.stringify(selectedMaterials));
 
       // Build specs object
@@ -840,6 +848,44 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                   <label htmlFor="prod-instock" style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)', cursor: 'pointer' }}>
                     Available in Stock
                   </label>
+                </div>
+
+                {/* 3D Print Lab Customize Option */}
+                <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      id="prod-allow-customize"
+                      checked={allowCustomize}
+                      onChange={e => setAllowCustomize(e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="prod-allow-customize" style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🎨 Show "Customize in 3D Print Lab" Button
+                    </label>
+                  </div>
+
+                  {allowCustomize && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '26px' }}>
+                      <label style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                        3D Lab Form Preset
+                      </label>
+                      <select
+                        value={labPreset}
+                        onChange={e => setLabPreset(e.target.value)}
+                        style={{ height: '32px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.78rem', padding: '0 0.5rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                      >
+                        <option value="keychain">🔑 Keychain (with live preview)</option>
+                        <option value="nameboard">🪧 Name Board</option>
+                        <option value="phonestand">📱 Phone Stand</option>
+                        <option value="trophy">🏆 Trophy</option>
+                        <option value="other">⚙️ Other (Custom)</option>
+                      </select>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                        This determines which form tab opens in the 3D Print Lab when the customer clicks "Customize".
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
