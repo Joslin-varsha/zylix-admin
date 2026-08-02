@@ -1,11 +1,12 @@
 import React from 'react';
-import { Layers, LogOut, Zap, ShoppingBag, SlidersHorizontal } from 'lucide-react';
+import { Layers, LogOut, Zap, ShoppingBag, SlidersHorizontal, Palette } from 'lucide-react';
 
 export default function Sidebar({ activeSection, onSectionChange, onLogout, quoteCount, orderCount }) {
   const navItems = [
     { id: 'quotes', label: 'Quote Requests', icon: Layers, badge: quoteCount },
     { id: 'orders', label: 'Catalog Orders', icon: ShoppingBag, badge: orderCount },
     { id: 'catalog', label: 'Product Manager', icon: SlidersHorizontal },
+    { id: 'lab-settings', label: '3D Lab Settings', icon: Palette },
   ];
 
   return (

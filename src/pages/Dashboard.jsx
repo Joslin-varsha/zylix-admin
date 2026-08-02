@@ -5,6 +5,7 @@ import QuoteDrawer from '../components/QuoteDrawer';
 import StatsBar from '../components/StatsBar';
 import { useQuotes } from '../hooks/useQuotes';
 import ProductsManager from '../components/ProductsManager';
+import LabSettingsManager from '../components/LabSettingsManager';
 import { Bell } from 'lucide-react';
 
 
@@ -45,6 +46,11 @@ export default function Dashboard({ onLogout }) {
         return {
           title: 'Catalog Product Manager',
           subtitle: 'Add new products, upload images, set prices and update specifications'
+        };
+      case 'lab-settings':
+        return {
+          title: '3D Print Lab Settings Manager',
+          subtitle: 'Customize product options, text & contour color swatches, and CAD slicer settings'
         };
       default:
         return {
@@ -264,6 +270,10 @@ export default function Dashboard({ onLogout }) {
           {activeSection === 'catalog' ? (
             <div style={{ flex: 1, overflow: 'auto', padding: '1.25rem 1.75rem' }}>
               <ProductsManager refreshTrigger={catalogRefreshTrigger} onLoadingChange={setCatalogLoading} />
+            </div>
+          ) : activeSection === 'lab-settings' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <LabSettingsManager />
             </div>
           ) : (
             <>
