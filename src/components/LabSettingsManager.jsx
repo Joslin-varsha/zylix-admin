@@ -527,7 +527,7 @@ export default function LabSettingsManager() {
             <input
               type="text"
               className="input-field"
-              placeholder="Option Label (e.g. 🚪 Door Sign)"
+              placeholder="Option Label "
               value={newProdLabel}
               onChange={e => setNewProdLabel(e.target.value)}
               style={{ height: '38px', fontSize: '0.82rem' }}
@@ -564,7 +564,7 @@ export default function LabSettingsManager() {
                         className="input-field"
                         value={editProdLabel}
                         onChange={e => setEditProdLabel(e.target.value)}
-                        placeholder="Option Label (e.g. 🔑 3D Custom Keychain)"
+                        placeholder="Option Label"
                         style={{ height: '36px', fontSize: '0.82rem' }}
                       />
                       <input
