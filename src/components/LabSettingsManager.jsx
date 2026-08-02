@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Palette, Plus, Trash2, Check, AlertCircle, RefreshCw, Layers, Box,
-  Sparkles, Sliders, ToggleLeft, ToggleRight, Eye, EyeOff, Save
+  Sparkles, Sliders, ToggleLeft, ToggleRight, Eye, EyeOff, Save, Edit, X
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   ],
   slicerMaterials: ['PLA', 'PETG', 'ABS', 'Resin', 'Wood', 'PP', 'PET'],
   slicerColors: ['Matte Black', 'Pure White', 'Signal Red', 'Navy Blue', 'Metallic Silver', 'Golden Yellow', 'Forest Green'],
+  prototypeTypes: ['School Project', 'College Project', 'Startup Prototype', 'Research Model', 'Architecture Model', 'Robotics Project', 'Science Model', 'Other'],
   enabledLabTabs: {
     slicer: true,
     designer: true,
@@ -57,10 +58,14 @@ export default function LabSettingsManager() {
   // Inputs for Product Types
   const [newProdLabel, setNewProdLabel] = useState('');
   const [newProdDesc, setNewProdDesc] = useState('');
+  const [editingProdId, setEditingProdId] = useState(null);
+  const [editProdLabel, setEditProdLabel] = useState('');
+  const [editProdDesc, setEditProdDesc] = useState('');
 
-  // Inputs for Slicer Materials & Colors
+  // Inputs for Slicer Materials & Colors & Prototype Options
   const [newMatName, setNewMatName] = useState('');
   const [newPrintColorName, setNewPrintColorName] = useState('');
+  const [newPrototypeTypeName, setNewPrototypeTypeName] = useState('');
 
   useEffect(() => {
     fetchLabSettings();
@@ -80,6 +85,7 @@ export default function LabSettingsManager() {
             baseColors: data.baseColors || DEFAULT_SETTINGS.baseColors,
             slicerMaterials: data.slicerMaterials || DEFAULT_SETTINGS.slicerMaterials,
             slicerColors: data.slicerColors || DEFAULT_SETTINGS.slicerColors,
+            prototypeTypes: data.prototypeTypes || DEFAULT_SETTINGS.prototypeTypes,
             enabledLabTabs: data.enabledLabTabs || DEFAULT_SETTINGS.enabledLabTabs
           });
         }
@@ -176,6 +182,35 @@ export default function LabSettingsManager() {
     handleSaveSettings(updated);
   };
 
+  const startEditProductType = (prod) => {
+    setEditingProdId(prod.id);
+    setEditProdLabel(prod.label);
+    setEditProdDesc(prod.description || '');
+  };
+
+  const saveEditProductType = () => {
+    if (!editProdLabel.trim()) return setError('Please enter a label for the product option.');
+    const updated = {
+      ...settings,
+      productTypes: settings.productTypes.map(p => p.id === editingProdId ? {
+        ...p,
+        label: editProdLabel.trim(),
+        description: editProdDesc.trim()
+      } : p)
+    };
+    setSettings(updated);
+    setEditingProdId(null);
+    setEditProdLabel('');
+    setEditProdDesc('');
+    handleSaveSettings(updated);
+  };
+
+  const cancelEditProductType = () => {
+    setEditingProdId(null);
+    setEditProdLabel('');
+    setEditProdDesc('');
+  };
+
   const toggleProductType = (id) => {
     const updated = {
       ...settings,
@@ -232,6 +267,27 @@ export default function LabSettingsManager() {
     const updated = {
       ...settings,
       slicerColors: settings.slicerColors.filter(item => item !== c)
+    };
+    setSettings(updated);
+    handleSaveSettings(updated);
+  };
+
+  const addPrototypeType = () => {
+    if (!newPrototypeTypeName.trim()) return setError('Please enter a prototype project option label.');
+    if (settings.prototypeTypes.includes(newPrototypeTypeName.trim())) return setError('Project option already exists.');
+    const updated = {
+      ...settings,
+      prototypeTypes: [...settings.prototypeTypes, newPrototypeTypeName.trim()]
+    };
+    setSettings(updated);
+    setNewPrototypeTypeName('');
+    handleSaveSettings(updated);
+  };
+
+  const removePrototypeType = (type) => {
+    const updated = {
+      ...settings,
+      prototypeTypes: settings.prototypeTypes.filter(item => item !== type)
     };
     setSettings(updated);
     handleSaveSettings(updated);
@@ -310,7 +366,7 @@ export default function LabSettingsManager() {
             display: 'flex', alignItems: 'center', gap: '8px'
           }}
         >
-          <Palette size={16} /> 1. Color Swatches (Text & Contour)
+          <Palette size={16} /> 1. Design Your Own
         </button>
         <button
           onClick={() => setActiveTab('products')}
@@ -495,36 +551,90 @@ export default function LabSettingsManager() {
 
           {/* Product Types List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {settings.productTypes.map(prod => (
-              <div key={prod.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: prod.enabled ? '#f8fafc' : '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: prod.enabled ? 1 : 0.6 }}>
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {prod.label}
-                    {!prod.enabled && <span style={{ fontSize: '0.65rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>Disabled</span>}
+            {settings.productTypes.map(prod => {
+              const isEditing = editingProdId === prod.id;
+              
+              if (isEditing) {
+                return (
+                  <div key={prod.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0.85rem 1rem', background: '#eff6ff', borderRadius: '10px', border: '1.5px solid #3b82f6' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e40af' }}>Editing Option: {prod.id}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={editProdLabel}
+                        onChange={e => setEditProdLabel(e.target.value)}
+                        placeholder="Option Label (e.g. 🔑 3D Custom Keychain)"
+                        style={{ height: '36px', fontSize: '0.82rem' }}
+                      />
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={editProdDesc}
+                        onChange={e => setEditProdDesc(e.target.value)}
+                        placeholder="Description"
+                        style={{ height: '36px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                      <button
+                        onClick={cancelEditProductType}
+                        className="btn btn-secondary"
+                        style={{ height: '32px', padding: '0 0.85rem', fontSize: '0.75rem' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveEditProductType}
+                        className="btn btn-primary"
+                        style={{ height: '32px', padding: '0 1rem', fontSize: '0.75rem', fontWeight: '800' }}
+                      >
+                        Save Changes
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{prod.description}</div>
-                </div>
+                );
+              }
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <button
-                    onClick={() => toggleProductType(prod.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: prod.enabled ? '#10b981' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: '700' }}
-                    title={prod.enabled ? 'Disable Option' : 'Enable Option'}
-                  >
-                    {prod.enabled ? <ToggleRight size={22} color="#10b981" /> : <ToggleLeft size={22} color="#94a3b8" />}
-                    {prod.enabled ? 'Active' : 'Hidden'}
-                  </button>
+              return (
+                <div key={prod.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: prod.enabled ? '#f8fafc' : '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: prod.enabled ? 1 : 0.6 }}>
+                  <div>
+                    <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {prod.label}
+                      {!prod.enabled && <span style={{ fontSize: '0.65rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>Disabled</span>}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{prod.description}</div>
+                  </div>
 
-                  <button
-                    onClick={() => removeProductType(prod.id)}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                    title="Delete Option"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      onClick={() => toggleProductType(prod.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: prod.enabled ? '#10b981' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: '700' }}
+                      title={prod.enabled ? 'Disable Option' : 'Enable Option'}
+                    >
+                      {prod.enabled ? <ToggleRight size={22} color="#10b981" /> : <ToggleLeft size={22} color="#94a3b8" />}
+                      {prod.enabled ? 'Active' : 'Hidden'}
+                    </button>
+
+                    <button
+                      onClick={() => startEditProductType(prod)}
+                      style={{ background: '#e2e8f0', border: 'none', color: '#1e293b', borderRadius: '6px', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: '700' }}
+                      title="Edit Option"
+                    >
+                      <Edit size={14} /> Edit
+                    </button>
+
+                    <button
+                      onClick={() => removeProductType(prod.id)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                      title="Delete Option"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -589,42 +699,31 @@ export default function LabSettingsManager() {
             </div>
           </div>
 
-          {/* Tab Visibility Toggles */}
+          {/* Prototype Building Project Options ("What are you building?") */}
           <div style={{ gridColumn: 'span 2', background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0' }}>
-              🌐 3D Print Lab Tabs Visibility on Storefront
+              🏗️ "What are you building?" Prototype Options ({(settings.prototypeTypes || []).length})
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-              <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>📁 CAD File Slicer Tab</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Upload STL / OBJ / 3MF file to get quote</div>
-                </div>
-                <button onClick={() => toggleLabTab('slicer')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  {settings.enabledLabTabs?.slicer !== false ? <ToggleRight size={26} color="#10b981" /> : <ToggleLeft size={26} color="#94a3b8" />}
-                </button>
-              </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', maxWidth: '500px' }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="New Option (e.g. Drone Frame, IoT Enclosure)"
+                value={newPrototypeTypeName}
+                onChange={e => setNewPrototypeTypeName(e.target.value)}
+                style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
+              />
+              <button onClick={addPrototypeType} className="btn btn-primary" style={{ height: '36px', padding: '0 1rem', fontSize: '0.78rem' }}>+ Add Option</button>
+            </div>
 
-              <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>🎨 Product Designer Tab</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Custom 3D text keychain & plaque designer</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {(settings.prototypeTypes || []).map((type, idx) => (
+                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px 12px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '700', color: '#0f172a' }}>
+                  <span>{type}</span>
+                  <button onClick={() => removePrototypeType(type)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }} title="Delete Option"><Trash2 size={13} /></button>
                 </div>
-                <button onClick={() => toggleLabTab('designer')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  {settings.enabledLabTabs?.designer !== false ? <ToggleRight size={26} color="#10b981" /> : <ToggleLeft size={26} color="#94a3b8" />}
-                </button>
-              </div>
-
-              <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>💡 Prototype Request Tab</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Custom 3D prototype & bulk order quotes</div>
-                </div>
-                <button onClick={() => toggleLabTab('prototype')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  {settings.enabledLabTabs?.prototype !== false ? <ToggleRight size={26} color="#10b981" /> : <ToggleLeft size={26} color="#94a3b8" />}
-                </button>
-              </div>
+              ))}
             </div>
           </div>
 
