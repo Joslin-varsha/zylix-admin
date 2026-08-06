@@ -674,7 +674,7 @@ export default function LabSettingsManager() {
           {/* Slicer Filament Colors */}
           <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0' }}>
-              🎨 Slicer Filament Print Colors ({settings.slicerColors.length})
+              🎨 Material Colors ({settings.slicerColors.length})
             </h3>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
