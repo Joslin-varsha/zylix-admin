@@ -31,7 +31,7 @@ export default function QuoteDrawer({ quote, onClose, onUpdated }) {
 
     // Validation: Pending requests must be updated to another status to save
     if (quote.status === 'Pending' && editStatus === 'Pending') {
-      setValidationError('To process this request, you must enter a quote amount and change the status to Quoted, Approved, or Declined.');
+      setValidationError('To process this request, change status to Quoted, Approved, Completed, Dispatched, Delivered, or Declined.');
       return;
     }
 
@@ -274,6 +274,64 @@ export default function QuoteDrawer({ quote, onClose, onUpdated }) {
           </div>
         </div>
 
+        {/* Quick Status Action Shortcut Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>Quick Lifecycle Actions</label>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setEditStatus('Completed')}
+              className="btn btn-secondary"
+              style={{
+                flex: '1 1 auto',
+                height: '32px',
+                fontSize: '0.75rem',
+                padding: '0 0.6rem',
+                background: editStatus === 'Completed' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-primary)',
+                color: editStatus === 'Completed' ? '#059669' : 'var(--text-primary)',
+                borderColor: editStatus === 'Completed' ? '#10b981' : 'var(--border-color)',
+                fontWeight: '700'
+              }}
+            >
+              🎉 Complete
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditStatus('Dispatched')}
+              className="btn btn-secondary"
+              style={{
+                flex: '1 1 auto',
+                height: '32px',
+                fontSize: '0.75rem',
+                padding: '0 0.6rem',
+                background: editStatus === 'Dispatched' ? 'rgba(124, 58, 237, 0.2)' : 'var(--bg-primary)',
+                color: editStatus === 'Dispatched' ? '#7c3aed' : 'var(--text-primary)',
+                borderColor: editStatus === 'Dispatched' ? '#7c3aed' : 'var(--border-color)',
+                fontWeight: '700'
+              }}
+            >
+              🚚 Dispatch
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditStatus('Delivered')}
+              className="btn btn-secondary"
+              style={{
+                flex: '1 1 auto',
+                height: '32px',
+                fontSize: '0.75rem',
+                padding: '0 0.6rem',
+                background: editStatus === 'Delivered' ? 'rgba(2, 132, 199, 0.2)' : 'var(--bg-primary)',
+                color: editStatus === 'Delivered' ? '#0284c7' : 'var(--text-primary)',
+                borderColor: editStatus === 'Delivered' ? '#0284c7' : 'var(--border-color)',
+                fontWeight: '700'
+              }}
+            >
+              📦 Deliver
+            </button>
+          </div>
+        </div>
+
         {/* Status */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           <label style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Status</label>
@@ -281,12 +339,15 @@ export default function QuoteDrawer({ quote, onClose, onUpdated }) {
             value={editStatus}
             onChange={e => setEditStatus(e.target.value)}
             className="select-field"
-            style={{ height: '36px', fontSize: '0.92rem' }}
+            style={{ height: '36px', fontSize: '0.88rem' }}
             id="quote-status-select"
           >
             <option value="Pending">⏳ Pending – Reviewing file</option>
             <option value="Quoted">💰 Quoted – Price sent</option>
             <option value="Approved">✅ Approved – In Production</option>
+            <option value="Completed">🎉 Completed – 3D Print finished & packed</option>
+            <option value="Dispatched">🚚 Dispatched – Package shipped & in transit</option>
+            <option value="Delivered">📦 Delivered – Order delivered to customer</option>
             <option value="Declined">❌ Declined – Cancelled</option>
           </select>
         </div>

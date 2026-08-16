@@ -6,9 +6,79 @@ function StatusBadge({ status }) {
     Pending: 'badge badge-pending',
     Quoted: 'badge badge-quoted',
     Approved: 'badge badge-approved',
+    Completed: 'badge badge-completed',
+    Dispatched: 'badge badge-dispatched',
+    Delivered: 'badge badge-delivered',
     Declined: 'badge badge-declined',
   };
   return <span className={classMap[status] || 'badge'}>{status}</span>;
+}
+
+function QuickNextStatusButton({ quote, onUpdate }) {
+  if (quote.status === 'Approved') {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); onUpdate(quote, 'Completed'); }}
+        className="btn btn-secondary"
+        title="Mark 3D Print Completed"
+        style={{
+          height: '28px',
+          padding: '0 0.6rem',
+          fontSize: '0.72rem',
+          fontWeight: '700',
+          borderRadius: '99px',
+          background: 'rgba(16, 185, 129, 0.1)',
+          color: '#059669',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+        }}
+      >
+        🎉 Complete
+      </button>
+    );
+  }
+  if (quote.status === 'Completed') {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); onUpdate(quote, 'Dispatched'); }}
+        className="btn btn-secondary"
+        title="Mark Order Dispatched / Shipped"
+        style={{
+          height: '28px',
+          padding: '0 0.6rem',
+          fontSize: '0.72rem',
+          fontWeight: '700',
+          borderRadius: '99px',
+          background: 'rgba(124, 58, 237, 0.1)',
+          color: '#7c3aed',
+          border: '1px solid rgba(124, 58, 237, 0.3)',
+        }}
+      >
+        🚚 Dispatch
+      </button>
+    );
+  }
+  if (quote.status === 'Dispatched') {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); onUpdate(quote, 'Delivered'); }}
+        className="btn btn-secondary"
+        title="Mark Order Delivered to Customer"
+        style={{
+          height: '28px',
+          padding: '0 0.6rem',
+          fontSize: '0.72rem',
+          fontWeight: '700',
+          borderRadius: '99px',
+          background: 'rgba(2, 132, 199, 0.1)',
+          color: '#0284c7',
+          border: '1px solid rgba(2, 132, 199, 0.3)',
+        }}
+      >
+        📦 Deliver
+      </button>
+    );
+  }
+  return null;
 }
 
 function TypeBadge({ type }) {
@@ -103,6 +173,9 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
             <option value="Pending">⏳ Pending</option>
             <option value="Quoted">💰 Quoted</option>
             <option value="Approved">✅ Approved</option>
+            <option value="Completed">🎉 Completed</option>
+            <option value="Dispatched">🚚 Dispatched</option>
+            <option value="Delivered">📦 Delivered</option>
             <option value="Declined">❌ Declined</option>
           </select>
         </div>
@@ -223,6 +296,7 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
                     </td>
                     <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <QuickNextStatusButton quote={q} onUpdate={handleQuickStatus} />
                         <button
                           onClick={e => { e.stopPropagation(); onSelectQuote(q); }}
                           className="btn btn-secondary"
@@ -242,7 +316,6 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
                           <Eye size={12} />
                           Details
                         </button>
-
                       </div>
                     </td>
                   </tr>
@@ -329,6 +402,7 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
                     </td>
                     <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <QuickNextStatusButton quote={q} onUpdate={handleQuickStatus} />
                         <button
                           onClick={e => { e.stopPropagation(); onSelectQuote(q); }}
                           className="btn btn-secondary"
@@ -348,7 +422,6 @@ export default function QuotesTable({ quotes, loading, selectedQuote, onSelectQu
                           <Eye size={12} />
                           Details
                         </button>
-
                       </div>
                     </td>
                   </tr>

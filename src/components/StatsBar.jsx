@@ -4,7 +4,7 @@ import { FileText, Clock, CheckCircle, TrendingUp } from 'lucide-react';
 export default function StatsBar({ quotes, mode = 'quotes' }) {
   const total = quotes.length;
   const pending = quotes.filter(q => q.status === 'Pending').length;
-  const approved = quotes.filter(q => q.status === 'Approved').length;
+  const activeOrders = quotes.filter(q => ['Approved', 'Completed', 'Dispatched', 'Delivered'].includes(q.status)).length;
   const quotedValue = quotes.reduce((acc, q) => acc + (q.price_estimate || 0), 0);
 
   const isOrders = mode === 'orders';
@@ -27,12 +27,12 @@ export default function StatsBar({ quotes, mode = 'quotes' }) {
       trend: { text: pending > 0 ? `${pending} items active` : 'Queue cleared', isPositive: pending === 0 }
     },
     { 
-      label: isOrders ? 'Paid & Approved' : 'Approved Custom Prints', 
-      value: approved, 
+      label: isOrders ? 'Active & Fulfilled' : 'Approved Custom Prints', 
+      value: activeOrders, 
       icon: CheckCircle, 
       color: 'var(--accent-green)', 
       bg: 'rgba(16, 185, 129, 0.08)',
-      trend: { text: '+8% vs last week', isPositive: true }
+      trend: { text: `${activeOrders} processed`, isPositive: true }
     },
     { 
       label: isOrders ? 'Total Order Revenue' : 'Total Quoted Value', 

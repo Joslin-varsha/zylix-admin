@@ -73,7 +73,7 @@ export default function Dashboard({ onLogout }) {
         }}
         onLogout={onLogout}
         quoteCount={quotes.filter(q => q.type !== 'order' && (q.status === 'Pending' || q.status === 'Quoted')).length}
-        orderCount={quotes.filter(q => q.type === 'order' || q.status === 'Approved').length}
+        orderCount={quotes.filter(q => q.type === 'order' || ['Approved', 'Completed', 'Dispatched', 'Delivered'].includes(q.status)).length}
       />
 
       {/* Main Content */}
@@ -280,7 +280,7 @@ export default function Dashboard({ onLogout }) {
               {/* Quotes / Orders table */}
               <div style={{ flex: 1, overflow: 'auto', padding: '1.25rem 1.75rem' }}>
                 <QuotesTable
-                  quotes={activeSection === 'quotes' ? quotes.filter(q => q.type !== 'order' && q.status !== 'Approved') : quotes.filter(q => q.type === 'order' || q.status === 'Approved')}
+                  quotes={activeSection === 'quotes' ? quotes.filter(q => q.type !== 'order' && ['Pending', 'Quoted'].includes(q.status)) : quotes.filter(q => q.type === 'order' || ['Approved', 'Completed', 'Dispatched', 'Delivered', 'Declined'].includes(q.status))}
                   loading={loading}
                   selectedQuote={selectedQuote}
                   onSelectQuote={handleSelectQuote}
