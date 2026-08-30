@@ -34,6 +34,16 @@ const DEFAULT_SETTINGS = {
   slicerMaterials: ['PLA', 'PETG', 'ABS', 'Resin', 'Wood', 'PP', 'PET'],
   slicerColors: ['Matte Black', 'Pure White', 'Signal Red', 'Navy Blue', 'Metallic Silver', 'Golden Yellow', 'Forest Green'],
   prototypeTypes: ['School Project', 'College Project', 'Startup Prototype', 'Research Model', 'Architecture Model', 'Robotics Project', 'Science Model', 'Other'],
+  designerFonts: [
+    'Luckiest Guy', 'Fredoka', 'Baloo 2', 'Chewy', 'Lilita One', 'Bubblegum Sans',
+    'Coiny', 'Sniglet', 'Concert One', 'Grandstander', 'Bagel Fat One', 'DynaPuff',
+    'Cherry Bomb One', 'Titan One', 'Bungee', 'Mochiy Pop One', 'Gochi Hand',
+    'Patrick Hand', 'Atma', 'Jua', 'Poppins', 'Montserrat', 'Outfit', 'Rubik',
+    'Nunito', 'DM Sans', 'Sora', 'Manrope', 'Plus Jakarta Sans', 'Urbanist',
+    'Orbitron', 'Audiowide', 'Rajdhani', 'Exo 2', 'Oxanium', 'Chakra Petch',
+    'Teko', 'Russo One', 'Syncopate', 'Barlow Condensed', 'Kanit', 'Bebas Neue',
+    'Anton', 'League Spartan', 'Archivo Black', 'Oswald', 'Righteous', 'Alfa Slab One'
+  ],
   enabledLabTabs: {
     slicer: true,
     designer: true,
@@ -66,6 +76,7 @@ export default function LabSettingsManager() {
   const [newMatName, setNewMatName] = useState('');
   const [newPrintColorName, setNewPrintColorName] = useState('');
   const [newPrototypeTypeName, setNewPrototypeTypeName] = useState('');
+  const [newFontName, setNewFontName] = useState('');
 
   useEffect(() => {
     fetchLabSettings();
@@ -86,6 +97,7 @@ export default function LabSettingsManager() {
             slicerMaterials: data.slicerMaterials || DEFAULT_SETTINGS.slicerMaterials,
             slicerColors: data.slicerColors || DEFAULT_SETTINGS.slicerColors,
             prototypeTypes: data.prototypeTypes || DEFAULT_SETTINGS.prototypeTypes,
+            designerFonts: data.designerFonts || DEFAULT_SETTINGS.designerFonts,
             enabledLabTabs: data.enabledLabTabs || DEFAULT_SETTINGS.enabledLabTabs
           });
         }
@@ -117,6 +129,55 @@ export default function LabSettingsManager() {
     } finally {
       setSaving(false);
     }
+  };
+
+  
+  // Helper to dynamically load Google Fonts stylesheet into document head
+  const loadGoogleFont = (fontName) => {
+    if (!fontName) return;
+    const linkId = `google-font-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}&display=swap`;
+      document.head.appendChild(link);
+    }
+  };
+
+  useEffect(() => {
+    const fontsList = settings.designerFonts || DEFAULT_SETTINGS.designerFonts;
+    if (Array.isArray(fontsList)) {
+      fontsList.forEach(f => loadGoogleFont(f));
+    }
+  }, [settings.designerFonts]);
+
+  // --- FONT HANDLERS ---
+  const addFont = () => {
+    if (!newFontName.trim()) return setError('Please enter a Google Font name.');
+    const fontName = newFontName.trim();
+    const currentFonts = settings.designerFonts || DEFAULT_SETTINGS.designerFonts;
+    if (currentFonts.some(f => f.toLowerCase() === fontName.toLowerCase())) {
+      return setError('This font is already in the list.');
+    }
+    loadGoogleFont(fontName);
+    const updated = {
+      ...settings,
+      designerFonts: [...currentFonts, fontName]
+    };
+    setSettings(updated);
+    setNewFontName('');
+    handleSaveSettings(updated);
+  };
+
+  const removeFont = (index) => {
+    const currentFonts = settings.designerFonts || DEFAULT_SETTINGS.designerFonts;
+    const updated = {
+      ...settings,
+      designerFonts: currentFonts.filter((_, i) => i !== index)
+    };
+    setSettings(updated);
+    handleSaveSettings(updated);
   };
 
   // --- 1. COLOR SWATCH HANDLERS ---
@@ -400,246 +461,218 @@ export default function LabSettingsManager() {
         >
           <Sliders size={16} /> 3. CAD Slicer & Prototype Options
         </button>
+        <button
+          onClick={() => setActiveTab('fonts')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '8px',
+            border: 'none',
+            fontWeight: '800',
+            fontSize: '0.84rem',
+            cursor: 'pointer',
+            background: activeTab === 'fonts' ? '#6366f1' : 'transparent',
+            color: activeTab === 'fonts' ? '#ffffff' : 'var(--text-secondary)',
+            display: 'flex', alignItems: 'center', gap: '8px'
+          }}
+        >
+          🔤 4. Font Options ({(settings.designerFonts || DEFAULT_SETTINGS.designerFonts).length})
+        </button>
       </div>
 
-      {/* SECTION 1: COLOR SWATCHES MANAGER */}
+      
+      
+      {/* 1. DESIGN YOUR OWN (COLORS ONLY) */}
       {activeTab === 'colors' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-          
-          {/* Text Color Swatches */}
-          <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              🎨 Text Colors Swatches ({settings.textColors.length})
-            </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* TEXT & BASE CONTOUR COLOR SWATCHES */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             
-            {/* Add Text Color Form */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <input
-                type="color"
-                value={newTextColorHex}
-                onChange={e => setNewTextColorHex(e.target.value)}
-                style={{ width: '38px', height: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }}
-                title="Choose Hex Color"
-              />
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Color Name (e.g. Neon Cyan)"
-                value={newTextColorName}
-                onChange={e => setNewTextColorName(e.target.value)}
-                style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
-              />
-              <button
-                onClick={addTextColor}
-                className="btn btn-primary"
-                style={{ height: '36px', padding: '0 1rem', fontSize: '0.78rem', fontWeight: '800' }}
-              >
-                + Add Color
-              </button>
-            </div>
-
-            {/* List of Text Colors */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
-              {settings.textColors.map((col, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.85rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: col.hex, border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                    <span style={{ fontWeight: '700', fontSize: '0.84rem', color: '#1e293b' }}>{col.name}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>({col.hex})</span>
-                  </div>
-                  <button
-                    onClick={() => removeTextColor(idx)}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                    title="Remove Color"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Base Contour Color Swatches */}
-          <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              🛡️ Base Contour Colors ({settings.baseColors.length})
-            </h3>
-            
-            {/* Add Base Color Form */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <input
-                type="color"
-                value={newBaseColorHex}
-                onChange={e => setNewBaseColorHex(e.target.value)}
-                style={{ width: '38px', height: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }}
-                title="Choose Hex Color"
-              />
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Base Color Name (e.g. Matte Gray)"
-                value={newBaseColorName}
-                onChange={e => setNewBaseColorName(e.target.value)}
-                style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
-              />
-              <button
-                onClick={addBaseColor}
-                className="btn btn-primary"
-                style={{ height: '36px', padding: '0 1rem', fontSize: '0.78rem', fontWeight: '800' }}
-              >
-                + Add Base Color
-              </button>
-            </div>
-
-            {/* List of Base Colors */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
-              {settings.baseColors.map((col, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.85rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: col.hex, border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                    <span style={{ fontWeight: '700', fontSize: '0.84rem', color: '#1e293b' }}>{col.name}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>({col.hex})</span>
-                  </div>
-                  <button
-                    onClick={() => removeBaseColor(idx)}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                    title="Remove Color"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* SECTION 2: PRODUCT TYPES MANAGER ("What would you like to create?") */}
-      {activeTab === 'products' && (
-        <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0' }}>
-            🛍️ "What Would You Like to Create?" Options ({settings.productTypes.length})
-          </h3>
-
-          {/* Add Product Type Form */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '10px', marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <input
-              type="text"
-              className="input-field"
-              placeholder="Option Label "
-              value={newProdLabel}
-              onChange={e => setNewProdLabel(e.target.value)}
-              style={{ height: '38px', fontSize: '0.82rem' }}
-            />
-            <input
-              type="text"
-              className="input-field"
-              placeholder="Description (e.g. Custom room door name plaque)"
-              value={newProdDesc}
-              onChange={e => setNewProdDesc(e.target.value)}
-              style={{ height: '38px', fontSize: '0.82rem' }}
-            />
-            <button
-              onClick={addProductType}
-              className="btn btn-primary"
-              style={{ height: '38px', padding: '0 1.25rem', fontSize: '0.8rem', fontWeight: '800' }}
-            >
-              + Add Product Option
-            </button>
-          </div>
-
-          {/* Product Types List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {settings.productTypes.map(prod => {
-              const isEditing = editingProdId === prod.id;
+            {/* Text Color Swatches */}
+            <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🎨 Text Colors Swatches ({settings.textColors.length})
+              </h3>
               
-              if (isEditing) {
-                return (
-                  <div key={prod.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0.85rem 1rem', background: '#eff6ff', borderRadius: '10px', border: '1.5px solid #3b82f6' }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e40af' }}>Editing Option: {prod.id}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
-                      <input
-                        type="text"
-                        className="input-field"
-                        value={editProdLabel}
-                        onChange={e => setEditProdLabel(e.target.value)}
-                        placeholder="Option Label"
-                        style={{ height: '36px', fontSize: '0.82rem' }}
-                      />
-                      <input
-                        type="text"
-                        className="input-field"
-                        value={editProdDesc}
-                        onChange={e => setEditProdDesc(e.target.value)}
-                        placeholder="Description"
-                        style={{ height: '36px', fontSize: '0.82rem' }}
-                      />
+              {/* Add Text Color Form */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="color"
+                  value={newTextColorHex}
+                  onChange={e => setNewTextColorHex(e.target.value)}
+                  style={{ width: '38px', height: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }}
+                  title="Choose Hex Color"
+                />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Color Name (e.g. Neon Cyan)"
+                  value={newTextColorName}
+                  onChange={e => setNewTextColorName(e.target.value)}
+                  style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={addTextColor}
+                  className="btn btn-primary"
+                  style={{ height: '36px', padding: '0 1rem', fontSize: '0.78rem', fontWeight: '800' }}
+                >
+                  + Add Color
+                </button>
+              </div>
+
+              {/* List of Text Colors */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
+                {settings.textColors.map((col, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.85rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: col.hex, border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+                      <span style={{ fontWeight: '700', fontSize: '0.84rem', color: '#1e293b' }}>{col.name}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>({col.hex})</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                      <button
-                        onClick={cancelEditProductType}
-                        className="btn btn-secondary"
-                        style={{ height: '32px', padding: '0 0.85rem', fontSize: '0.75rem' }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={saveEditProductType}
-                        className="btn btn-primary"
-                        style={{ height: '32px', padding: '0 1rem', fontSize: '0.75rem', fontWeight: '800' }}
-                      >
-                        Save Changes
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={prod.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: prod.enabled ? '#f8fafc' : '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: prod.enabled ? 1 : 0.6 }}>
-                  <div>
-                    <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {prod.label}
-                      {!prod.enabled && <span style={{ fontSize: '0.65rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>Disabled</span>}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{prod.description}</div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <button
-                      onClick={() => toggleProductType(prod.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: prod.enabled ? '#10b981' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: '700' }}
-                      title={prod.enabled ? 'Disable Option' : 'Enable Option'}
-                    >
-                      {prod.enabled ? <ToggleRight size={22} color="#10b981" /> : <ToggleLeft size={22} color="#94a3b8" />}
-                      {prod.enabled ? 'Active' : 'Hidden'}
-                    </button>
-
-                    <button
-                      onClick={() => startEditProductType(prod)}
-                      style={{ background: '#e2e8f0', border: 'none', color: '#1e293b', borderRadius: '6px', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: '700' }}
-                      title="Edit Option"
-                    >
-                      <Edit size={14} /> Edit
-                    </button>
-
-                    <button
-                      onClick={() => removeProductType(prod.id)}
+                      type="button"
+                      onClick={() => removeTextColor(idx)}
                       style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                      title="Delete Option"
+                      title="Remove Color"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            </div>
+
+            {/* Base Contour Color Swatches */}
+            <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🛡️ Base Contour Colors ({settings.baseColors.length})
+              </h3>
+              
+              {/* Add Base Color Form */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="color"
+                  value={newBaseColorHex}
+                  onChange={e => setNewBaseColorHex(e.target.value)}
+                  style={{ width: '38px', height: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }}
+                  title="Choose Hex Color"
+                />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Base Color Name (e.g. Matte Gray)"
+                  value={newBaseColorName}
+                  onChange={e => setNewBaseColorName(e.target.value)}
+                  style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={addBaseColor}
+                  className="btn btn-primary"
+                  style={{ height: '36px', padding: '0 1rem', fontSize: '0.78rem', fontWeight: '800' }}
+                >
+                  + Add Base Color
+                </button>
+              </div>
+
+              {/* List of Base Colors */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
+                {settings.baseColors.map((col, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.85rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: col.hex, border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+                      <span style={{ fontWeight: '700', fontSize: '0.84rem', color: '#1e293b' }}>{col.name}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>({col.hex})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeBaseColor(idx)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                      title="Remove Color"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* SECTION 3: SLICER & PROTOTYPE OPTIONS */}
+      {/* 4. FONT OPTIONS SEPARATE TAB */}
+      {activeTab === 'fonts' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* 🔤 3D DESIGNER FONTS MANAGER */}
+          <div className="card" style={{ padding: '1.25rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: 'var(--text-primary, #0f172a)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🔤 3D Designer Fonts ({(settings.designerFonts || DEFAULT_SETTINGS.designerFonts).length})
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)', margin: '4px 0 0 0' }}>
+                  Add new Google Fonts or delete existing fonts available to customers on the /designer lab page.
+                </p>
+              </div>
+            </div>
+
+            {/* Add Font Input Bar */}
+            <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', backgroundColor: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <input
+                type="text"
+                placeholder="Enter Google Font Name (e.g. Lobster, Fredoka, Pacifico, Outfit)..."
+                value={newFontName}
+                onChange={e => setNewFontName(e.target.value)}
+                className="input-field"
+                style={{ flex: 1, height: '38px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 0.75rem' }}
+                onKeyDown={e => e.key === 'Enter' && addFont()}
+              />
+              <button
+                type="button"
+                onClick={addFont}
+                className="btn-primary"
+                style={{ height: '38px', padding: '0 1.2rem', fontSize: '0.82rem', fontWeight: '800', borderRadius: '6px', background: '#6366f1', color: '#ffffff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={15} /> Add Font
+              </button>
+            </div>
+
+            {/* Grid of Active Fonts with Live Typeface Rendering */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.75rem' }}>
+              {(settings.designerFonts || DEFAULT_SETTINGS.designerFonts).map((fontName, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0.95rem',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  <span style={{ fontFamily: `"${fontName}", sans-serif`, fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>
+                    {fontName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFont(idx)}
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                    title="Delete font option"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. WHAT WOULD YOU LIKE TO CREATE */}
       {activeTab === 'slicer' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           
