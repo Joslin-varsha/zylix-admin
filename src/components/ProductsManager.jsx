@@ -71,8 +71,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
   const [originalPrice, setOriginalPrice] = useState('');
   const [badge, setBadge] = useState('');
   const [description, setDescription] = useState('');
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imagesList, setImagesList] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState(['PLA']);
   const [availableMaterials, setAvailableMaterials] = useState(() => {
     const saved = localStorage.getItem('zylix_available_materials');
@@ -131,16 +130,28 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleFilesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const newItems = files.map(file => ({
+      type: 'file',
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    setImagesList(prev => [...prev, ...newItems]);
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (indexToRemove) => {
+    setImagesList(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleSetCover = (indexToCover) => {
+    setImagesList(prev => {
+      const copy = [...prev];
+      const [chosen] = copy.splice(indexToCover, 1);
+      return [chosen, ...copy];
+    });
   };
 
   const handleCatFileChange = (e) => {
@@ -269,8 +280,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setOriginalPrice(prod.originalPrice || '');
     setBadge(prod.badge || '');
     setDescription(prod.description || '');
-    setImagePreview(prod.image || '');
-    setImageFile(null);
+    const curImgs = Array.isArray(prod.images) && prod.images.length > 0 ? prod.images : (prod.image ? [prod.image] : []);
+    setImagesList(curImgs.map(url => ({ type: 'existing', url })));
     
     const prodMats = prod.materials || ['PLA'];
     setSelectedMaterials(prodMats);
@@ -317,8 +328,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setOriginalPrice('');
     setBadge('');
     setDescription('');
-    setImageFile(null);
-    setImagePreview('');
+    setImagesList([]);
     setSelectedMaterials(['PLA']);
     setSpecs([
       { key: 'Material', value: 'PLA' },
@@ -343,8 +353,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     }
     
     // Asset presence validation
-    if (!editingProduct && !imageFile) {
-      return setError('Product cover image file is required.');
+    if (imagesList.length === 0) {
+      return setError('At least one product photo is required.');
     }
 
     setSubmitting(true);
@@ -384,8 +394,22 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       });
       formData.append('specs', JSON.stringify(specsObj));
 
-      if (imageFile) {
-        formData.append('image', imageFile);
+      // Multi-image payload
+      const existingUrls = imagesList
+        .filter(item => item.type === 'existing')
+        .map(item => item.url);
+      formData.append('existingImages', JSON.stringify(existingUrls));
+
+      const newFiles = imagesList.filter(item => item.type === 'file');
+      newFiles.forEach(item => {
+        formData.append('images', item.file);
+      });
+
+      // Backward compatibility cover image
+      if (imagesList[0]?.type === 'file') {
+        formData.append('image', imagesList[0].file);
+      } else if (imagesList[0]?.type === 'existing') {
+        formData.append('image', imagesList[0].url);
       }
 
       const url = editingProduct ? `${API_BASE}/api/products/${editingProduct.id}` : `${API_BASE}/api/products`;
@@ -791,17 +815,133 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
 
               {/* Right Column: Image and Status */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Product Image File *</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                      Product Photos ({imagesList.length}) *
+                    </label>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      First photo is Primary Cover
+                    </span>
+                  </div>
+
+                  {/* Photos Grid */}
+                  {imagesList.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
+                      gap: '8px',
+                      maxHeight: '210px',
+                      overflowY: 'auto',
+                      padding: '6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      background: 'var(--bg-secondary)'
+                    }}>
+                      {imagesList.map((item, idx) => {
+                        const isPrimary = idx === 0;
+                        const displayUrl = item.type === 'file' ? item.preview : resolveImageUrl(item.url);
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              position: 'relative',
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              aspectRatio: '1',
+                              border: isPrimary ? '2.5px solid #000000' : '1px solid var(--border-color)',
+                              background: '#ffffff',
+                              boxShadow: isPrimary ? '0 2px 8px rgba(0,0,0,0.18)' : 'none'
+                            }}
+                          >
+                            <img
+                              src={displayUrl}
+                              alt={`Photo ${idx + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+
+                            {/* Primary Badge or Set Cover Button */}
+                            {isPrimary ? (
+                              <div style={{
+                                position: 'absolute',
+                                top: '3px',
+                                left: '3px',
+                                background: '#000000',
+                                color: '#ffffff',
+                                fontSize: '0.54rem',
+                                fontWeight: '800',
+                                padding: '1px 4px',
+                                borderRadius: '3px',
+                                letterSpacing: '0.02em',
+                                zIndex: 2
+                              }}>
+                                ★ Cover
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCover(idx)}
+                                title="Make this the Primary Cover photo"
+                                style={{
+                                  position: 'absolute',
+                                  top: '3px',
+                                  left: '3px',
+                                  background: 'rgba(0,0,0,0.68)',
+                                  color: '#ffffff',
+                                  fontSize: '0.52rem',
+                                  fontWeight: '700',
+                                  padding: '1px 4px',
+                                  borderRadius: '3px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  zIndex: 2
+                                }}
+                              >
+                                Set Cover
+                              </button>
+                            )}
+
+                            {/* Remove Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              title="Remove photo"
+                              style={{
+                                position: 'absolute',
+                                top: '3px',
+                                right: '3px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.92)',
+                                color: '#ffffff',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                zIndex: 2,
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.25)'
+                              }}
+                            >
+                              <X size={11} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Upload Drop Zone / Add More Button */}
                   <div style={{
                     border: '2px dashed var(--border-color)',
                     borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
+                    padding: '0.85rem',
                     textAlign: 'center',
                     background: 'var(--bg-secondary)',
                     cursor: 'pointer',
                     position: 'relative',
-                    minHeight: '140px',
+                    minHeight: imagesList.length > 0 ? '70px' : '120px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -811,29 +951,25 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleFileChange}
+                      multiple
+                      onChange={handleFilesChange}
                       style={{
                         position: 'absolute',
                         inset: 0,
                         opacity: 0,
                         cursor: 'pointer'
                       }}
-                      required={!imagePreview}
                       id="prod-image-file"
                     />
-                    {imagePreview ? (
-                      <img 
-                        src={resolveImageUrl(imagePreview)}
-                        alt="Preview" 
-                        style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '4px', objectFit: 'contain' }} 
-                      />
-                    ) : (
-                      <>
-                        <Upload size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Click or Drag Image File</span>
-                        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px' }}>PNG, JPG or WEBP (Max 5MB)</span>
-                      </>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                      <Upload size={18} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: '700' }}>
+                        {imagesList.length > 0 ? '+ Upload More Pictures' : 'Click or Drag Multiple Pictures'}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      PNG, JPG, or WEBP (select multiple images at once)
+                    </span>
                   </div>
                 </div>
 
@@ -1067,6 +1203,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                     >
                       <td style={{ padding: '0.6rem 1rem' }}>
                         <div style={{
+                          position: 'relative',
                           width: '40px',
                           height: '40px',
                           borderRadius: '6px',
@@ -1088,6 +1225,21 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                             />
                           ) : (
                             <Package size={16} style={{ color: 'var(--text-muted)' }} />
+                          )}
+                          {prod.images && prod.images.length > 1 && (
+                            <span style={{
+                              position: 'absolute',
+                              bottom: '1px',
+                              right: '1px',
+                              background: 'rgba(0,0,0,0.78)',
+                              color: '#ffffff',
+                              fontSize: '0.52rem',
+                              fontWeight: '800',
+                              padding: '0 3px',
+                              borderRadius: '3px'
+                            }}>
+                              {prod.images.length}
+                            </span>
                           )}
                         </div>
                       </td>
