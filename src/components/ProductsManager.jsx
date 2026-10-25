@@ -58,6 +58,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
   // Categories Panel & Form State
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
   const [showCategoriesPanel, setShowCategoriesPanel] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('Sparkles');
   const [catImageFile, setCatImageFile] = useState(null);
@@ -166,13 +167,81 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     }
   };
 
+  const handleEditCategoryClick = (cat) => {
+    setEditingCategory(cat);
+    setNewCatName(cat.label || '');
+    setNewCatIcon(cat.icon || 'Sparkles');
+    setCatImageFile(null);
+    setCatImagePreview(cat.img ? resolveImageUrl(cat.img) : '');
+    setError('');
+    setSuccessMsg('');
+    const formEl = document.getElementById('add-category-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const handleCancelCategoryEdit = () => {
+    setEditingCategory(null);
+    setNewCatName('');
+    setNewCatIcon('Sparkles');
+    setCatImageFile(null);
+    setCatImagePreview('');
+    setError('');
+  };
+
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
 
     if (!newCatName.trim()) return setError('Category name is required.');
-    
+
+    // ━━━ UPDATE / EDIT CATEGORY ━━━
+    if (editingCategory) {
+      setSubmittingCat(true);
+      try {
+        const formData = new FormData();
+        formData.append('name', newCatName.trim());
+        formData.append('icon', newCatIcon);
+        if (catImageFile) {
+          formData.append('image', catImageFile);
+        }
+
+        const res = await fetch(`${API_BASE}/api/categories/${editingCategory.id}`, {
+          method: 'PUT',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Error updating category: ${res.status}`);
+        }
+
+        const responseData = await res.json();
+        setSuccessMsg(`Category "${newCatName.trim()}" updated successfully!`);
+
+        if (responseData.category) {
+          setCategories(prev => 
+            prev.map(c => c.id === editingCategory.id ? responseData.category : c)
+                .sort((a, b) => a.label.localeCompare(b.label))
+          );
+        } else {
+          fetchCategories();
+        }
+
+        handleCancelCategoryEdit();
+        setTimeout(() => setSuccessMsg(''), 5000);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'An error occurred while updating the category.');
+      } finally {
+        setSubmittingCat(false);
+      }
+      return;
+    }
+
+    // ━━━ CREATE NEW CATEGORY ━━━
     // Uniqueness validation
     const normalizedId = newCatName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const exists = categories.some(c => c.id === normalizedId);
@@ -240,6 +309,9 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       }
 
       setCategories(prev => prev.filter(c => c.id !== catId));
+      if (editingCategory?.id === catId) {
+        handleCancelCategoryEdit();
+      }
       setSuccessMsg('Category deleted successfully.');
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
@@ -561,11 +633,23 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
       {showCategoriesPanel && (
         <div className="card animate-fadeIn" style={{ padding: '1.5rem', background: '#ffffff', display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
           
-          {/* Left Column: Add Category Form */}
+          {/* Left Column: Add/Edit Category Form */}
           <div style={{ borderRight: '1px solid var(--border-color)', paddingRight: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1.25rem', marginTop: 0 }}>
-              Create New Category
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                {editingCategory ? `Edit Category: ${editingCategory.label}` : 'Create New Category'}
+              </h3>
+              {editingCategory && (
+                <button
+                  type="button"
+                  onClick={handleCancelCategoryEdit}
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.72rem', padding: '2px 8px', height: '24px', color: 'var(--accent-cyan)' }}
+                >
+                  + New Category
+                </button>
+              )}
+            </div>
             <form onSubmit={handleCategorySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} id="add-category-form">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <label htmlFor="cat-name" style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Category Name *</label>
@@ -630,7 +714,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                       opacity: 0,
                       cursor: 'pointer'
                     }}
-                    required={!catImagePreview}
+                    required={!catImagePreview && !editingCategory}
                     id="cat-image-file"
                   />
                   {catImagePreview ? (
@@ -649,14 +733,28 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ height: '38px', fontSize: '0.8rem', marginTop: '0.5rem' }}
-                disabled={submittingCat}
-              >
-                {submittingCat ? 'Creating Category...' : 'Publish Category'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {editingCategory && (
+                  <button
+                    type="button"
+                    onClick={handleCancelCategoryEdit}
+                    className="btn btn-ghost"
+                    style={{ flex: 1, height: '38px', fontSize: '0.8rem', border: '1px solid var(--border-color)' }}
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: editingCategory ? 1.5 : 'none', width: editingCategory ? 'auto' : '100%', height: '38px', fontSize: '0.8rem' }}
+                  disabled={submittingCat}
+                >
+                  {submittingCat 
+                    ? (editingCategory ? 'Saving Changes...' : 'Creating Category...') 
+                    : (editingCategory ? 'Save Changes' : 'Publish Category')}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -668,8 +766,19 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '380px', overflowY: 'auto', paddingRight: '0.5rem' }}>
               {categories.map(cat => {
                 const IconComponent = iconMap[cat.icon] || Package;
+                const isEditingThis = editingCategory?.id === cat.id;
                 return (
-                  <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.6rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)', transition: 'all 0.2s' }}>
+                  <div key={cat.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.85rem', 
+                    padding: '0.6rem 0.75rem', 
+                    border: isEditingThis ? '1.5px solid var(--accent-cyan, #06b6d4)' : '1px solid var(--border-color)', 
+                    borderRadius: 'var(--radius-md)', 
+                    background: isEditingThis ? 'rgba(6, 182, 212, 0.06)' : 'var(--bg-secondary)', 
+                    transition: 'all 0.2s',
+                    boxShadow: isEditingThis ? '0 0 0 2px rgba(6, 182, 212, 0.15)' : 'none'
+                  }}>
                     <div style={{ width: '42px', height: '42px', borderRadius: '6px', overflow: 'hidden', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', flexShrink: 0 }}>
                       {cat.img ? (
                         <img 
@@ -691,27 +800,50 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>ID: {cat.id}</div>
                     </div>
-                    <button
-                      onClick={() => handleCategoryDelete(cat.id)}
-                      className="btn btn-ghost"
-                      style={{
-                        height: '28px',
-                        width: '28px',
-                        padding: 0,
-                        borderRadius: '50%',
-                        background: 'rgba(220, 38, 38, 0.08)',
-                        color: 'var(--accent-red)',
-                        border: '1px solid rgba(220, 38, 38, 0.15)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}
-                      title="Delete category"
-                      id={`delete-cat-${cat.id}`}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => handleEditCategoryClick(cat)}
+                        className="btn btn-ghost"
+                        style={{
+                          height: '28px',
+                          width: '28px',
+                          padding: 0,
+                          borderRadius: '6px',
+                          background: isEditingThis ? 'var(--accent-cyan, #06b6d4)' : 'rgba(59, 130, 246, 0.08)',
+                          color: isEditingThis ? '#ffffff' : 'var(--accent-blue, #2563eb)',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Edit category"
+                        id={`edit-cat-${cat.id}`}
+                      >
+                        <Edit size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCategoryDelete(cat.id)}
+                        className="btn btn-ghost"
+                        style={{
+                          height: '28px',
+                          width: '28px',
+                          padding: 0,
+                          borderRadius: '6px',
+                          background: 'rgba(220, 38, 38, 0.08)',
+                          color: 'var(--accent-red, #dc2626)',
+                          border: '1px solid rgba(220, 38, 38, 0.15)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Delete category"
+                        id={`delete-cat-${cat.id}`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
