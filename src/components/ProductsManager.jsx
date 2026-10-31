@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Package, Trash2, Plus, X, Upload, Check, AlertCircle, RefreshCw, Edit, SlidersHorizontal,
   Sparkles, Box, Key, Smile, Lightbulb, PenTool, Gift, Image, 
-  Wrench, Shield, Compass, Palette
+  Wrench, Shield, Compass, Palette, Search
 } from 'lucide-react';
 
 const STATIC_CATEGORIES = [
@@ -47,6 +47,27 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
   const [successMsg, setSuccessMsg] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Filter products by search query and category filter
+  const filteredProducts = React.useMemo(() => {
+    let list = [...products];
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(p => 
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.categoryLabel && p.categoryLabel.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        String(p.id).includes(q)
+      );
+    }
+    if (categoryFilter !== 'all') {
+      list = list.filter(p => p.category === categoryFilter);
+    }
+    return list;
+  }, [products, searchQuery, categoryFilter]);
 
   // Sync loading state with parent
   useEffect(() => {
@@ -387,9 +408,27 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
     setAllowCustomize(prod.allow_customize === true);
     setLabPreset(prod.lab_preset || 'other');
     setShowAddForm(true);
+
+    // Smoothly scroll to the top edit form across all scrollable containers
+    setTimeout(() => {
+      const formEl = document.getElementById('product-form-container') || document.getElementById('add-product-form');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      let parent = formEl?.parentElement;
+      while (parent) {
+        if (parent.scrollHeight > parent.clientHeight) {
+          parent.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        parent = parent.parentElement;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 60);
   };
 
   const resetForm = () => {
+    setEditingProduct(null);
+    setError('');
     setName('');
     if (categories && categories.length > 0) {
       setCategory(categories[0].id);
@@ -477,10 +516,8 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
         formData.append('images', item.file);
       });
 
-      // Backward compatibility cover image
-      if (imagesList[0]?.type === 'file') {
-        formData.append('image', imagesList[0].file);
-      } else if (imagesList[0]?.type === 'existing') {
+      // Backward compatibility cover image (only send if existing URL so new files are not duplicated)
+      if (imagesList[0]?.type === 'existing') {
         formData.append('image', imagesList[0].url);
       }
 
@@ -505,8 +542,9 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
         if (editingProduct) {
           setProducts(prev => prev.map(p => p.id === responseData.product.id ? responseData.product : p));
         } else {
-          setProducts(prev => [...prev, responseData.product]);
+          setProducts(prev => [responseData.product, ...prev]);
         }
+        fetchProducts(); // Refresh in background to stay 100% in sync
       } else {
         fetchProducts(); // Refresh list just in case
       }
@@ -614,6 +652,12 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
             <button
               type="button"
               onClick={() => {
+                if (!showAddForm) {
+                  resetForm();
+                  setEditingProduct(null);
+                } else {
+                  resetForm();
+                }
                 setShowAddForm(!showAddForm);
                 setError('');
                 setSuccessMsg('');
@@ -855,7 +899,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
 
       {/* ADD PRODUCT FORM PANEL */}
       {showAddForm && (
-        <div className="card animate-fadeIn" style={{ padding: '1.5rem', background: '#ffffff' }}>
+        <div id="product-form-container" className="card animate-fadeIn" style={{ padding: '1.5rem', background: '#ffffff' }}>
           <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1.25rem', marginTop: 0 }}>
             {editingProduct ? `Edit Product: ${editingProduct.name}` : 'Enter New Catalog Product Details'}
           </h3>
@@ -1296,6 +1340,144 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
         </div>
       )}
 
+      {/* PRODUCT SEARCH & FILTER BAR */}
+      {!showCategoriesPanel && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          background: '#ffffff',
+          padding: '0.85rem 1.25rem',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+        }}>
+          {/* Search Input with Icon */}
+          <div style={{
+            position: 'relative',
+            flex: '1 1 280px',
+            maxWidth: '500px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Search 
+              size={16} 
+              style={{ 
+                position: 'absolute', 
+                left: '12px', 
+                color: 'var(--text-muted)',
+                pointerEvents: 'none'
+              }} 
+            />
+            <input
+              type="text"
+              className="input-field"
+              placeholder="Search product name, category, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                paddingLeft: '38px',
+                paddingRight: searchQuery ? '36px' : '14px',
+                height: '38px',
+                fontSize: '0.82rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--text-muted)'
+                }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Category Dropdown Filter & Status Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="input-field"
+              style={{
+                height: '38px',
+                fontSize: '0.8rem',
+                borderRadius: '8px',
+                padding: '0 0.85rem',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                cursor: 'pointer',
+                fontWeight: '600',
+                color: 'var(--text-primary)'
+              }}
+            >
+              <option value="all">All Categories ({products.length})</option>
+              {categories.map((cat) => {
+                const count = products.filter(p => p.category === cat.id).length;
+                return (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label} {count > 0 ? `(${count})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+
+            {/* Results Counter Pill */}
+            {(searchQuery || categoryFilter !== 'all') && (
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: '700',
+                color: 'var(--accent-cyan)',
+                background: 'rgba(2, 132, 199, 0.08)',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                border: '1px solid rgba(2, 132, 199, 0.2)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                Found {filteredProducts.length} of {products.length}
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-cyan)',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    fontWeight: '800',
+                    padding: 0,
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Reset
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* PRODUCTS INVENTORY LIST */}
       {!showCategoriesPanel && (
         <div className="card" style={{ overflow: 'hidden', background: '#ffffff' }}>
@@ -1307,6 +1489,23 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
           ) : products.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <span style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>No products found in the catalog. Add one to get started!</span>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                No products found
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {searchQuery ? `No items match "${searchQuery}".` : 'No products found in this category.'}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
+                className="btn btn-secondary"
+                style={{ height: '32px', fontSize: '0.76rem', marginTop: '6px' }}
+              >
+                Clear Search & Filters
+              </button>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -1322,7 +1521,7 @@ export default function ProductsManager({ refreshTrigger = 0, onLoadingChange })
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((prod, index) => (
+                  {filteredProducts.map((prod, index) => (
                     <tr
                       key={prod.id || index}
                       style={{
